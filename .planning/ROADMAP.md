@@ -43,10 +43,11 @@ Plans:
   3. Claude can retrieve user's channel subscriptions
   4. Claude can search YouTube Music for tracks by artist, name, or query
   5. Claude can verify whether a specific track exists on YouTube Music
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- TBD (created during plan-phase)
+- [ ] 02-01-PLAN.md — Taste data retrieval (liked videos, playlists, subscriptions)
+- [ ] 02-02-PLAN.md — Search and video verification
 
 ### Phase 3: Playlist Management
 **Goal**: Claude can create playlists and populate them with tracks
@@ -70,9 +71,9 @@ Phases execute in numeric order: 1 → 2 → 3
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation & Authentication | 2/2 | ✓ Complete | 2026-02-13 |
-| 2. Data Access | 0/TBD | Not started | - |
+| 2. Data Access | 0/2 | Not started | - |
 | 3. Playlist Management | 0/TBD | Not started | - |
 
 ---
 *Roadmap created: 2026-02-13*
-*Last updated: 2026-02-13 (Phase 1 complete)*
+*Last updated: 2026-02-13 (Phase 2 planned)*
