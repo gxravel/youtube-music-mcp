@@ -9,9 +9,9 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Authentication
 
-- [ ] **AUTH-01**: User can authenticate with Google account via OAuth2 flow
-- [ ] **AUTH-02**: OAuth2 tokens persist to disk and survive server restarts
-- [ ] **AUTH-03**: Expired access tokens refresh automatically using refresh token
+- [x] **AUTH-01**: User can authenticate with Google account via OAuth2 flow
+- [x] **AUTH-02**: OAuth2 tokens persist to disk and survive server restarts
+- [x] **AUTH-03**: Expired access tokens refresh automatically using refresh token
 
 ### Taste Data
 

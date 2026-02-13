@@ -1,5 +1,6 @@
 # Environment and secrets
 .env
+.mcp.json
 token.json
 credentials.json
 

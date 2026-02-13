@@ -12,7 +12,7 @@ Build an MCP server in Go that gives Claude access to YouTube Music data and pla
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Foundation & Authentication** - MCP server core with OAuth2 flow and YouTube API client
+- [x] **Phase 1: Foundation & Authentication** - MCP server core with OAuth2 flow and YouTube API client
 - [ ] **Phase 2: Data Access** - Retrieve user taste data and search YouTube Music tracks
 - [ ] **Phase 3: Playlist Management** - Create and populate playlists on user's account
 
@@ -30,8 +30,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 2 plans
 
 Plans:
-- [ ] 01-01-PLAN.md — Project scaffolding, config, and OAuth2 auth package
-- [ ] 01-02-PLAN.md — YouTube client, MCP server wiring, and end-to-end verification
+- [x] 01-01-PLAN.md — Project scaffolding, config, and OAuth2 auth package
+- [x] 01-02-PLAN.md — YouTube client, MCP server wiring, and end-to-end verification
 
 ### Phase 2: Data Access
 **Goal**: Claude can retrieve user's YouTube Music taste data and search for tracks
@@ -69,10 +69,10 @@ Phases execute in numeric order: 1 → 2 → 3
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation & Authentication | 0/2 | Planned | - |
+| 1. Foundation & Authentication | 2/2 | ✓ Complete | 2026-02-13 |
 | 2. Data Access | 0/TBD | Not started | - |
 | 3. Playlist Management | 0/TBD | Not started | - |
 
 ---
 *Roadmap created: 2026-02-13*
-*Last updated: 2026-02-13 (Phase 1 planned)*
+*Last updated: 2026-02-13 (Phase 1 complete)*
