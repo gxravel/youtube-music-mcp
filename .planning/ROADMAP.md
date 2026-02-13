@@ -27,10 +27,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. User can authenticate with Google account through OAuth2 web flow
   3. OAuth2 tokens persist across server restarts and refresh automatically when expired
   4. Server can make authenticated YouTube API calls (tested with basic API query)
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- TBD (created during plan-phase)
+- [ ] 01-01-PLAN.md — Project scaffolding, config, and OAuth2 auth package
+- [ ] 01-02-PLAN.md — YouTube client, MCP server wiring, and end-to-end verification
 
 ### Phase 2: Data Access
 **Goal**: Claude can retrieve user's YouTube Music taste data and search for tracks
@@ -68,10 +69,10 @@ Phases execute in numeric order: 1 → 2 → 3
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation & Authentication | 0/TBD | Not started | - |
+| 1. Foundation & Authentication | 0/2 | Planned | - |
 | 2. Data Access | 0/TBD | Not started | - |
 | 3. Playlist Management | 0/TBD | Not started | - |
 
 ---
 *Roadmap created: 2026-02-13*
-*Last updated: 2026-02-13*
+*Last updated: 2026-02-13 (Phase 1 planned)*
