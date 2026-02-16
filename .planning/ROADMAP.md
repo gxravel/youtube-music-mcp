@@ -58,10 +58,10 @@ Plans:
   2. Claude can add tracks to an existing playlist by video ID
   3. Claude can list user's existing playlists to avoid duplicates or manage existing ones
   4. Created playlists appear immediately in user's YouTube Music interface
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- TBD (created during plan-phase)
+- [ ] 03-01-PLAN.md — Playlist creation and video addition (CreatePlaylist, AddVideosToPlaylist + MCP tools)
 
 ## Progress
 
@@ -72,8 +72,8 @@ Phases execute in numeric order: 1 → 2 → 3
 |-------|----------------|--------|-----------|
 | 1. Foundation & Authentication | 2/2 | ✓ Complete | 2026-02-13 |
 | 2. Data Access | 0/2 | Not started | - |
-| 3. Playlist Management | 0/TBD | Not started | - |
+| 3. Playlist Management | 0/1 | Not started | - |
 
 ---
 *Roadmap created: 2026-02-13*
-*Last updated: 2026-02-13 (Phase 2 planned)*
+*Last updated: 2026-02-16 (Phase 3 planned)*
