@@ -2,32 +2,30 @@
 
 ## What This Is
 
-An MCP (Model Context Protocol) server written in Go that gives Claude access to a user's YouTube Music listening history and the ability to create playlists. Claude analyzes listening patterns, recommends music from its own knowledge combined with YouTube Music search, and delivers recommendations as playable playlists in the user's Firefox pinned tab.
+An MCP server written in Go that gives Claude access to a user's YouTube Music data (liked videos, playlists, subscriptions) and the ability to search for tracks, create playlists, and populate them with recommendations. Claude uses its broad music knowledge combined with the user's taste profile to recommend genuinely interesting music delivered as playable YouTube Music playlists.
 
 ## Core Value
 
-Claude can analyze my full YouTube Music listening history and recommend genuinely interesting music I haven't heard — not the popular stuff YouTube's algorithm pushes — and deliver it as a ready-to-play playlist.
+Claude can analyze my YouTube Music taste and recommend genuinely interesting music I haven't heard — not the popular stuff YouTube's algorithm pushes — and deliver it as a ready-to-play playlist.
 
 ## Requirements
 
 ### Validated
 
-<!-- Shipped and confirmed valuable. -->
-
-(None yet — ship to validate)
+- ✓ OAuth2 authentication with token persistence and auto-refresh — v1.0
+- ✓ Taste data retrieval (liked videos, playlists, subscriptions) — v1.0
+- ✓ YouTube Music search with music category filtering — v1.0
+- ✓ Video lookup and verification — v1.0
+- ✓ Playlist creation with privacy controls — v1.0
+- ✓ Video addition to playlists with duplicate handling — v1.0
 
 ### Active
 
-<!-- Current scope. Building toward these. -->
-
-- [ ] MCP server exposes tools for Claude to read YouTube Music listening history
-- [ ] MCP server exposes tools to search YouTube Music for tracks
-- [ ] MCP server exposes tools to create/manage playlists on YouTube Music
-- [ ] OAuth2 authentication with Google/YouTube for accessing user data
-- [ ] Full listening history retrieval (all time, not just recent)
-- [ ] Claude can analyze taste patterns (artists, genres, listening frequency)
-- [ ] Claude recommends from its music knowledge + verifies tracks exist on YouTube Music
-- [ ] Recommendations delivered as YouTube Music playlists the user can open and play
+- [ ] Mood/context-based recommendations ("chill work music", "aggressive workout tracks")
+- [ ] Deep cuts discovery from favorite artists (lesser-known tracks, B-sides)
+- [ ] Tunable discovery bias (how adventurous recommendations should be)
+- [ ] Listening pattern analysis (genre distribution, favorite artists)
+- [ ] Music collection gap identification
 
 ### Out of Scope
 
@@ -36,30 +34,42 @@ Claude can analyze my full YouTube Music listening history and recommend genuine
 - Mobile app or standalone UI — this is an MCP server consumed by Claude
 - Offline music analysis — requires active YouTube API connection
 - Social features / sharing — personal use only
+- Listening history access — no official YouTube API, would violate ToS
+- Multi-platform (Spotify, Apple Music) — YouTube Music only for clean scope
+- Unofficial ytmusicapi / cookie auth — violates YouTube ToS, unreliable
 
 ## Context
 
-- The user is frustrated with YouTube Music's recommendation algorithm, which surfaces popular/well-known songs rather than genuinely new discoveries
-- The MCP approach means Claude acts as the recommendation engine, using its broad music knowledge to suggest tracks that match the user's taste profile but go beyond what YouTube's algorithm would surface
-- The user runs YouTube Music in a Firefox pinned tab — recommendations become playlists they open in that tab
-- YouTube Data API v3 provides access to liked videos, playlists, and search — but "listening history" specifically requires careful handling as it's not directly exposed the same way
-- Go is chosen as the implementation language, with `mcp-go` SDK and Google's official Go API client libraries
+Shipped v1.0 with 1,343 LOC Go across 3 phases in 3 days.
+Tech stack: Go, MCP Go SDK (github.com/modelcontextprotocol/go-sdk), Google YouTube Data API v3, caarlos0/env for config.
+
+8 MCP tools available: get_liked_videos, list_playlists, get_playlist_items, list_subscriptions, search_videos, get_video, create_playlist, add_to_playlist.
+
+YouTube Data API quota: 10,000 units/day. Search costs 100 units, playlist writes cost 50 units, reads cost 1-5 units.
 
 ## Constraints
 
-- **Tech stack**: Go with `github.com/mark3labs/mcp-go` for MCP protocol, `google.golang.org/api/youtube/v3` for YouTube API
-- **Auth**: OAuth2 required for YouTube API access to user data (reading history, creating playlists)
-- **API limits**: YouTube Data API has quota limits (10,000 units/day default) — need efficient API usage
-- **History access**: YouTube doesn't expose full "listening history" directly via API — may need to work with liked videos, playlists, and watch history as proxies
+- **Tech stack**: Go with `github.com/modelcontextprotocol/go-sdk/mcp` for MCP protocol, `google.golang.org/api/youtube/v3` for YouTube API
+- **Auth**: OAuth2 required for YouTube API access to user data (reading taste data, creating playlists)
+- **API limits**: YouTube Data API has quota limits (10,000 units/day default) — search is most expensive at 100 units
+- **History access**: YouTube doesn't expose listening history via API — taste data limited to liked videos, playlists, and subscriptions
 
 ## Key Decisions
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Go over TypeScript | User preference + solid MCP/YouTube API library support in Go | — Pending |
-| YouTube API over browser automation | Cleaner, more reliable data access; browser automation is fragile | — Pending |
-| Playlist creation over browser playback control | Simpler delivery mechanism; user opens playlist link in their pinned tab | — Pending |
-| Claude as recommendation engine | Leverages Claude's broad music knowledge to find genuinely interesting tracks, not just algorithm-driven popular picks | — Pending |
+| Go over TypeScript | User preference + solid MCP/YouTube API library support in Go | ✓ Good |
+| YouTube API over browser automation | Cleaner, more reliable data access; browser automation is fragile | ✓ Good |
+| Playlist creation over browser playback control | Simpler delivery mechanism; user opens playlist link in their pinned tab | ✓ Good |
+| Claude as recommendation engine | Leverages Claude's broad music knowledge beyond algorithm-driven picks | ✓ Good |
+| caarlos0/env for config | Type-safe struct tags, cleaner than manual os.Getenv | ✓ Good |
+| Atomic token writes (temp+rename) | Prevents corruption on crash during token refresh | ✓ Good |
+| MCP typed handlers (AddTool generic) | Automatic schema generation, compile-time type safety | ✓ Good |
+| Single-page search (no pagination) | Conserves quota (100 units/page), sufficient for recommendations | ✓ Good |
+| videoCategoryId=10 for music filtering | Not perfect but best available filter via official API | ✓ Good |
+| Skip duplicate videos silently (409) | Better UX than erroring; goal is "video in playlist" | ✓ Good |
+| Default privacy to "private" | Safe default prevents accidental public exposure | ✓ Good |
+| YouTube Music URLs in responses | Project targets YouTube Music users, not regular YouTube | ✓ Good |
 
 ---
-*Last updated: 2026-02-13 after initialization*
+*Last updated: 2026-02-16 after v1.0 milestone*

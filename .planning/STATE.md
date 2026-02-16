@@ -2,10 +2,10 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-02-13)
+See: .planning/PROJECT.md (updated 2026-02-16)
 
-**Core value:** Claude can analyze my full YouTube Music listening history and recommend genuinely interesting music I haven't heard — not the popular stuff YouTube's algorithm pushes — and deliver it as a ready-to-play playlist.
-**Current focus:** Phase 3 - Playlist Management
+**Core value:** Claude can analyze my YouTube Music taste and recommend genuinely interesting music I haven't heard — delivered as ready-to-play playlists.
+**Current focus:** v1.0 shipped — planning next milestone
 
 ## Current Position
 
