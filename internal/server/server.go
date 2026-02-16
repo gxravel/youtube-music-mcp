@@ -23,11 +23,17 @@ func NewServer(logger *slog.Logger, ytClient *youtube.Client) *Server {
 		Version: "0.1.0",
 	}, nil)
 
-	return &Server{
+	s := &Server{
 		mcpServer: mcpServer,
 		logger:    logger,
 		ytClient:  ytClient,
 	}
+
+	// Register MCP tools
+	s.registerPlaylistTools()
+	s.registerSubscriptionTools()
+
+	return s
 }
 
 // Run starts the MCP server with stdio transport
