@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
+	"google.golang.org/api/googleapi"
 	youtube_v3 "google.golang.org/api/youtube/v3"
 )
 
@@ -193,4 +195,103 @@ func (c *Client) GetPlaylistItems(ctx context.Context, playlistID string, maxRes
 	}
 
 	return videos, nil
+}
+
+// CreatePlaylist creates a new playlist on the user's YouTube Music account.
+// Quota cost: 50 units.
+func (c *Client) CreatePlaylist(ctx context.Context, title, description, privacyStatus string) (*Playlist, error) {
+	// Validate title is non-empty
+	if title == "" {
+		return nil, fmt.Errorf("title cannot be empty")
+	}
+
+	// Default privacyStatus to "private" if empty
+	if privacyStatus == "" {
+		privacyStatus = "private"
+	}
+
+	// Validate privacyStatus
+	validPrivacy := map[string]bool{"public": true, "private": true, "unlisted": true}
+	if !validPrivacy[privacyStatus] {
+		return nil, fmt.Errorf("invalid privacyStatus: must be one of 'public', 'private', or 'unlisted'")
+	}
+
+	// Create playlist via YouTube API
+	playlist := &youtube_v3.Playlist{
+		Snippet: &youtube_v3.PlaylistSnippet{
+			Title:       title,
+			Description: description,
+		},
+		Status: &youtube_v3.PlaylistStatus{
+			PrivacyStatus: privacyStatus,
+		},
+	}
+
+	call := c.service.Playlists.Insert([]string{"snippet", "status"}, playlist)
+	resp, err := call.Do()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create playlist: %w", err)
+	}
+
+	// Return domain Playlist
+	return &Playlist{
+		ID:          resp.Id,
+		Title:       resp.Snippet.Title,
+		Description: resp.Snippet.Description,
+		ItemCount:   0,
+	}, nil
+}
+
+// AddVideosToPlaylist adds one or more videos to an existing playlist.
+// Duplicates are skipped silently. Returns the count of successfully added videos.
+// Quota cost: 50 units per video added.
+func (c *Client) AddVideosToPlaylist(ctx context.Context, playlistID string, videoIDs []string) (int, error) {
+	// Validate inputs
+	if playlistID == "" {
+		return 0, fmt.Errorf("playlistID cannot be empty")
+	}
+	if len(videoIDs) == 0 {
+		return 0, fmt.Errorf("videoIDs cannot be empty")
+	}
+
+	successCount := 0
+
+	// Add each video to the playlist
+	for _, videoID := range videoIDs {
+		// Check for context cancellation
+		if err := ctx.Err(); err != nil {
+			return successCount, err
+		}
+
+		// Create playlist item
+		playlistItem := &youtube_v3.PlaylistItem{
+			Snippet: &youtube_v3.PlaylistItemSnippet{
+				PlaylistId: playlistID,
+				ResourceId: &youtube_v3.ResourceId{
+					Kind:    "youtube#video",
+					VideoId: videoID,
+				},
+			},
+		}
+
+		// Insert the item
+		call := c.service.PlaylistItems.Insert([]string{"snippet"}, playlistItem)
+		_, err := call.Do()
+		if err != nil {
+			// Check for duplicate error
+			var apiErr *googleapi.Error
+			if errors.As(err, &apiErr) {
+				// HTTP 409 or message contains "videoAlreadyInPlaylist" - skip silently
+				if apiErr.Code == 409 || strings.Contains(apiErr.Message, "videoAlreadyInPlaylist") {
+					continue
+				}
+			}
+			// Other errors - return with current success count
+			return successCount, fmt.Errorf("failed to add video %s to playlist: %w", videoID, err)
+		}
+
+		successCount++
+	}
+
+	return successCount, nil
 }
