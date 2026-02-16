@@ -45,6 +45,30 @@ type getPlaylistItemsInput struct {
 	MaxResults int64  `json:"maxResults" jsonschema:"description=Maximum number of playlist items to return (default 50),minimum=1,maximum=500"`
 }
 
+type createPlaylistInput struct {
+	Title         string `json:"title" jsonschema:"required,description=Playlist name/title (required)"`
+	Description   string `json:"description" jsonschema:"description=Playlist description (optional)"`
+	PrivacyStatus string `json:"privacyStatus" jsonschema:"description=Privacy setting: public\\, private\\, or unlisted (defaults to private),enum=public,enum=private,enum=unlisted"`
+}
+
+type createPlaylistOutput struct {
+	PlaylistID  string `json:"playlistId" jsonschema:"description=YouTube playlist ID"`
+	Title       string `json:"title" jsonschema:"description=Playlist title"`
+	Description string `json:"description" jsonschema:"description=Playlist description"`
+	URL         string `json:"url" jsonschema:"description=Direct YouTube Music URL to open the playlist"`
+}
+
+type addToPlaylistInput struct {
+	PlaylistID string   `json:"playlistId" jsonschema:"required,description=YouTube playlist ID (from create_playlist or list_playlists)"`
+	VideoIDs   []string `json:"videoIds" jsonschema:"required,description=List of YouTube video IDs to add (from search_videos or get_video)"`
+}
+
+type addToPlaylistOutput struct {
+	Added       int    `json:"added" jsonschema:"description=Number of videos successfully added"`
+	Total       int    `json:"total" jsonschema:"description=Total number of video IDs provided"`
+	PlaylistURL string `json:"playlistUrl" jsonschema:"description=Direct YouTube Music URL to open the playlist"`
+}
+
 // registerPlaylistTools registers all playlist-related MCP tools
 func (s *Server) registerPlaylistTools() {
 	// Tool 1: get_liked_videos
@@ -146,6 +170,65 @@ func (s *Server) registerPlaylistTools() {
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
 				&mcp.TextContent{Text: fmt.Sprintf("Retrieved %d videos from playlist", len(videos))},
+			},
+		}, output, nil
+	})
+
+	// Tool 4: create_playlist
+	mcp.AddTool(s.mcpServer, &mcp.Tool{
+		Name:        "create_playlist",
+		Description: "Create a new playlist on the user's YouTube Music account. Returns the playlist ID and a direct URL to open it in YouTube Music. Privacy defaults to 'private' if not specified. Quota cost: 50 units.",
+	}, func(ctx context.Context, req *mcp.CallToolRequest, input createPlaylistInput) (*mcp.CallToolResult, createPlaylistOutput, error) {
+		// Call YouTube client
+		playlist, err := s.ytClient.CreatePlaylist(ctx, input.Title, input.Description, input.PrivacyStatus)
+		if err != nil {
+			return nil, createPlaylistOutput{}, fmt.Errorf("failed to create playlist: %w", err)
+		}
+
+		// Build YouTube Music URL
+		url := fmt.Sprintf("https://music.youtube.com/playlist?list=%s", playlist.ID)
+
+		// Convert to output format
+		output := createPlaylistOutput{
+			PlaylistID:  playlist.ID,
+			Title:       playlist.Title,
+			Description: playlist.Description,
+			URL:         url,
+		}
+
+		// Return result with summary
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				&mcp.TextContent{Text: fmt.Sprintf("Created playlist '%s' (ID: %s)\nURL: %s", playlist.Title, playlist.ID, url)},
+			},
+		}, output, nil
+	})
+
+	// Tool 5: add_to_playlist
+	mcp.AddTool(s.mcpServer, &mcp.Tool{
+		Name:        "add_to_playlist",
+		Description: "Add one or more videos to an existing YouTube playlist by video ID. Duplicate videos are skipped silently. Use search_videos to find video IDs first. Quota cost: 50 units per video added.",
+	}, func(ctx context.Context, req *mcp.CallToolRequest, input addToPlaylistInput) (*mcp.CallToolResult, addToPlaylistOutput, error) {
+		// Call YouTube client
+		added, err := s.ytClient.AddVideosToPlaylist(ctx, input.PlaylistID, input.VideoIDs)
+		if err != nil {
+			return nil, addToPlaylistOutput{}, fmt.Errorf("failed to add videos to playlist: %w", err)
+		}
+
+		// Build YouTube Music URL
+		url := fmt.Sprintf("https://music.youtube.com/playlist?list=%s", input.PlaylistID)
+
+		// Convert to output format
+		output := addToPlaylistOutput{
+			Added:       added,
+			Total:       len(input.VideoIDs),
+			PlaylistURL: url,
+		}
+
+		// Return result with summary
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				&mcp.TextContent{Text: fmt.Sprintf("Added %d of %d videos to playlist\nURL: %s", added, len(input.VideoIDs), url)},
 			},
 		}, output, nil
 	})
