@@ -1,0 +1,196 @@
+package youtube
+
+import (
+	"context"
+	"errors"
+	"fmt"
+
+	youtube_v3 "google.golang.org/api/youtube/v3"
+)
+
+// Domain types for playlist and video data
+type Video struct {
+	ID           string
+	Title        string
+	ChannelTitle string
+}
+
+type Playlist struct {
+	ID          string
+	Title       string
+	Description string
+	ItemCount   int64
+}
+
+// Sentinel error for stopping pagination early
+var errStopPagination = fmt.Errorf("stop pagination")
+
+// GetLikedVideos retrieves the user's liked videos/songs
+func (c *Client) GetLikedVideos(ctx context.Context, maxResults int64) ([]Video, error) {
+	// Default to 50 if not specified
+	if maxResults <= 0 {
+		maxResults = 50
+	}
+
+	// First, get the likes playlist ID
+	channelsCall := c.service.Channels.List([]string{"contentDetails"}).Mine(true)
+	channelsResp, err := channelsCall.Do()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get likes playlist ID: %w", err)
+	}
+
+	if len(channelsResp.Items) == 0 {
+		return nil, fmt.Errorf("no channel found for authenticated user")
+	}
+
+	likesPlaylistID := channelsResp.Items[0].ContentDetails.RelatedPlaylists.Likes
+	if likesPlaylistID == "" {
+		return nil, fmt.Errorf("no likes playlist found")
+	}
+
+	// Now retrieve liked videos using pagination
+	var videos []Video
+	playlistItemsCall := c.service.PlaylistItems.
+		List([]string{"snippet"}).
+		PlaylistId(likesPlaylistID).
+		MaxResults(50)
+
+	err = playlistItemsCall.Pages(ctx, func(response *youtube_v3.PlaylistItemListResponse) error {
+		// Check context cancellation
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+
+		// Extract videos from this page
+		for _, item := range response.Items {
+			videos = append(videos, Video{
+				ID:           item.Snippet.ResourceId.VideoId,
+				Title:        item.Snippet.Title,
+				ChannelTitle: item.Snippet.VideoOwnerChannelTitle,
+			})
+
+			// Stop if we've reached the requested count
+			if int64(len(videos)) >= maxResults {
+				return errStopPagination
+			}
+		}
+
+		return nil
+	})
+
+	// Handle pagination stop
+	if err != nil && !errors.Is(err, errStopPagination) {
+		return nil, fmt.Errorf("failed to retrieve liked videos: %w", err)
+	}
+
+	// Truncate to maxResults
+	if int64(len(videos)) > maxResults {
+		videos = videos[:maxResults]
+	}
+
+	return videos, nil
+}
+
+// ListPlaylists retrieves the user's playlists
+func (c *Client) ListPlaylists(ctx context.Context, maxResults int64) ([]Playlist, error) {
+	// Default to 25 if not specified
+	if maxResults <= 0 {
+		maxResults = 25
+	}
+
+	var playlists []Playlist
+	playlistsCall := c.service.Playlists.
+		List([]string{"snippet", "contentDetails"}).
+		Mine(true).
+		MaxResults(50)
+
+	err := playlistsCall.Pages(ctx, func(response *youtube_v3.PlaylistListResponse) error {
+		// Check context cancellation
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+
+		// Extract playlists from this page
+		for _, item := range response.Items {
+			playlists = append(playlists, Playlist{
+				ID:          item.Id,
+				Title:       item.Snippet.Title,
+				Description: item.Snippet.Description,
+				ItemCount:   item.ContentDetails.ItemCount,
+			})
+
+			// Stop if we've reached the requested count
+			if int64(len(playlists)) >= maxResults {
+				return errStopPagination
+			}
+		}
+
+		return nil
+	})
+
+	// Handle pagination stop
+	if err != nil && !errors.Is(err, errStopPagination) {
+		return nil, fmt.Errorf("failed to list playlists: %w", err)
+	}
+
+	// Truncate to maxResults
+	if int64(len(playlists)) > maxResults {
+		playlists = playlists[:maxResults]
+	}
+
+	return playlists, nil
+}
+
+// GetPlaylistItems retrieves videos from a specific playlist
+func (c *Client) GetPlaylistItems(ctx context.Context, playlistID string, maxResults int64) ([]Video, error) {
+	// Validate input
+	if playlistID == "" {
+		return nil, fmt.Errorf("playlistID cannot be empty")
+	}
+
+	// Default to 50 if not specified
+	if maxResults <= 0 {
+		maxResults = 50
+	}
+
+	var videos []Video
+	playlistItemsCall := c.service.PlaylistItems.
+		List([]string{"snippet"}).
+		PlaylistId(playlistID).
+		MaxResults(50)
+
+	err := playlistItemsCall.Pages(ctx, func(response *youtube_v3.PlaylistItemListResponse) error {
+		// Check context cancellation
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+
+		// Extract videos from this page
+		for _, item := range response.Items {
+			videos = append(videos, Video{
+				ID:           item.Snippet.ResourceId.VideoId,
+				Title:        item.Snippet.Title,
+				ChannelTitle: item.Snippet.VideoOwnerChannelTitle,
+			})
+
+			// Stop if we've reached the requested count
+			if int64(len(videos)) >= maxResults {
+				return errStopPagination
+			}
+		}
+
+		return nil
+	})
+
+	// Handle pagination stop
+	if err != nil && !errors.Is(err, errStopPagination) {
+		return nil, fmt.Errorf("failed to retrieve playlist items: %w", err)
+	}
+
+	// Truncate to maxResults
+	if int64(len(videos)) > maxResults {
+		videos = videos[:maxResults]
+	}
+
+	return videos, nil
+}
