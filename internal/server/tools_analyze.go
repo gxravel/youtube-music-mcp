@@ -11,7 +11,7 @@ import (
 // Input type for analyze tool
 
 type analyzeTastesInput struct {
-	IncludePreviousRecommendations bool `json:"includePreviousRecommendations" jsonschema:"description=If true\\, also fetch songs from playlists previously created by this tool to adjust analysis"`
+	IncludePreviousRecommendations bool `json:"includePreviousRecommendations" jsonschema:"If true then also fetch songs from playlists previously created by this tool to adjust analysis"`
 }
 
 // registerAnalyzeTools registers the analyze-my-tastes MCP tool

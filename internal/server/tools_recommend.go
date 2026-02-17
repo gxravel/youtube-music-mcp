@@ -12,16 +12,16 @@ import (
 // Input types for recommendation tools
 
 type recommendPlaylistInput struct {
-	NumberOfSongs int    `json:"numberOfSongs" jsonschema:"required,description=Number of songs to find and add to the playlist,minimum=1,maximum=50"`
-	Description   string `json:"description" jsonschema:"description=What kind of music to find — genres\\, moods\\, artists\\, era\\, or any description. If empty\\, recommendations are based purely on taste analysis."`
+	NumberOfSongs int    `json:"numberOfSongs" jsonschema:"Number of songs to find and add to the playlist (1-50)"`
+	Description   string `json:"description,omitempty" jsonschema:"What kind of music to find (genres/moods/artists/era). If empty recommendations are based purely on taste analysis."`
 }
 
 type recommendArtistsInput struct {
-	Description string `json:"description" jsonschema:"description=What kind of artists to recommend — genre preferences\\, mood\\, or any guidance"`
+	Description string `json:"description,omitempty" jsonschema:"What kind of artists to recommend (genre preferences/mood/any guidance)"`
 }
 
 type recommendAlbumsInput struct {
-	Description string `json:"description" jsonschema:"description=What kind of albums to recommend — genre preferences\\, mood\\, era\\, or any guidance"`
+	Description string `json:"description,omitempty" jsonschema:"What kind of albums to recommend (genre preferences/mood/era/any guidance)"`
 }
 
 // registerRecommendTools registers the 3 recommendation MCP tools
