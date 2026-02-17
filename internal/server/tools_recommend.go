@@ -86,10 +86,7 @@ func (s *Server) registerRecommendTools() {
 		}
 
 		// Construct search queries
-		numQueries := int(math.Ceil(float64(input.NumberOfSongs) / 5.0))
-		if numQueries > 5 {
-			numQueries = 5 // Cap to conserve quota
-		}
+		numQueries := min(int(math.Ceil(float64(input.NumberOfSongs)/5.0)), 5)
 
 		var searchQueries []string
 		if input.Description != "" {
@@ -121,11 +118,11 @@ func (s *Server) registerRecommendTools() {
 			if err != nil {
 				// Log error but continue with other searches
 				s.logger.Warn("search failed", "query", query, "error", err)
-				searchSummary.WriteString(fmt.Sprintf("- '%s' (failed)\n", query))
+				fmt.Fprintf(&searchSummary, "- '%s' (failed)\n", query)
 				continue
 			}
 
-			searchSummary.WriteString(fmt.Sprintf("- '%s' (%d results)\n", query, len(results)))
+			fmt.Fprintf(&searchSummary, "- '%s' (%d results)\n", query, len(results))
 
 			for _, result := range results {
 				if _, exists := videoIDMap[result.VideoID]; !exists {
@@ -181,13 +178,13 @@ func (s *Server) registerRecommendTools() {
 		playlistURL := fmt.Sprintf("https://music.youtube.com/playlist?list=%s", playlist.ID)
 
 		var output strings.Builder
-		output.WriteString(fmt.Sprintf("# Playlist Created: %s\n\n", playlist.Title))
-		output.WriteString(fmt.Sprintf("**YouTube Music URL:** %s\n\n", playlistURL))
-		output.WriteString(fmt.Sprintf("**Songs added:** %d of %d requested\n\n", added, input.NumberOfSongs))
-		output.WriteString(fmt.Sprintf("**Taste context:** %d liked songs, %d subscriptions, %d playlists analyzed\n\n", len(likedVideos), len(subscriptions), len(playlists)))
-		output.WriteString(fmt.Sprintf("**Top artists in your taste:** %s\n\n", strings.Join(topArtists[:min(5, len(topArtists))], ", ")))
+		fmt.Fprintf(&output, "# Playlist Created: %s\n\n", playlist.Title)
+		fmt.Fprintf(&output, "**YouTube Music URL:** %s\n\n", playlistURL)
+		fmt.Fprintf(&output, "**Songs added:** %d of %d requested\n\n", added, input.NumberOfSongs)
+		fmt.Fprintf(&output, "**Taste context:** %d liked songs, %d subscriptions, %d playlists analyzed\n\n", len(likedVideos), len(subscriptions), len(playlists))
+		fmt.Fprintf(&output, "**Top artists in your taste:** %s\n\n", strings.Join(topArtists[:min(5, len(topArtists))], ", "))
 		output.WriteString(searchSummary.String())
-		output.WriteString(fmt.Sprintf("\n**Estimated quota usage:** ~%d units (%d searches × 100 + 50 playlist creation + %d × 50 adds)\n", len(searchQueries)*100+50+added*50, len(searchQueries), added))
+		fmt.Fprintf(&output, "\n**Estimated quota usage:** ~%d units (%d searches × 100 + 50 playlist creation + %d × 50 adds)\n", len(searchQueries)*100+50+added*50, len(searchQueries), added)
 
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
@@ -235,17 +232,17 @@ func (s *Server) registerRecommendTools() {
 		output.WriteString("# Artist Recommendation Context\n\n")
 
 		if input.Description != "" {
-			output.WriteString(fmt.Sprintf("**User request:** %s\n\n", input.Description))
+			fmt.Fprintf(&output, "**User request:** %s\n\n", input.Description)
 		}
 
-		output.WriteString(fmt.Sprintf("## Your Current Artists (%d unique artists)\n\n", len(artists)))
+		fmt.Fprintf(&output, "## Your Current Artists (%d unique artists)\n\n", len(artists))
 		for _, artist := range artists {
-			output.WriteString(fmt.Sprintf("- %s\n", artist))
+			fmt.Fprintf(&output, "- %s\n", artist)
 		}
 		output.WriteString("\n")
 
 		output.WriteString("## Taste Profile\n\n")
-		output.WriteString(fmt.Sprintf("- Based on %d liked songs and %d subscriptions\n", len(likedVideos), len(subscriptions)))
+		fmt.Fprintf(&output, "- Based on %d liked songs and %d subscriptions\n", len(likedVideos), len(subscriptions))
 		output.WriteString("- The artists listed above are already known to the user\n\n")
 
 		output.WriteString("## Instruction for LLM\n\n")
@@ -297,17 +294,17 @@ func (s *Server) registerRecommendTools() {
 		output.WriteString("# Album Recommendation Context\n\n")
 
 		if input.Description != "" {
-			output.WriteString(fmt.Sprintf("**User request:** %s\n\n", input.Description))
+			fmt.Fprintf(&output, "**User request:** %s\n\n", input.Description)
 		}
 
-		output.WriteString(fmt.Sprintf("## Your Current Artists (%d unique artists)\n\n", len(artists)))
+		fmt.Fprintf(&output, "## Your Current Artists (%d unique artists)\n\n", len(artists))
 		for _, artist := range artists {
-			output.WriteString(fmt.Sprintf("- %s\n", artist))
+			fmt.Fprintf(&output, "- %s\n", artist)
 		}
 		output.WriteString("\n")
 
 		output.WriteString("## Taste Profile\n\n")
-		output.WriteString(fmt.Sprintf("- Based on %d liked songs and %d subscriptions\n", len(likedVideos), len(subscriptions)))
+		fmt.Fprintf(&output, "- Based on %d liked songs and %d subscriptions\n", len(likedVideos), len(subscriptions))
 		output.WriteString("- The artists listed above are already known to the user\n\n")
 
 		output.WriteString("## Instruction for LLM\n\n")
@@ -319,12 +316,4 @@ func (s *Server) registerRecommendTools() {
 			},
 		}, nil, nil
 	})
-}
-
-// Helper function for min
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }

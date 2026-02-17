@@ -31,9 +31,9 @@ func (s *Server) registerAnalyzeTools() {
 			return nil, nil, fmt.Errorf("failed to get liked videos: %w", err)
 		}
 
-		output.WriteString(fmt.Sprintf("## Liked Songs (%d songs)\n\n", len(likedVideos)))
+		fmt.Fprintf(&output, "## Liked Songs (%d songs)\n\n", len(likedVideos))
 		for _, v := range likedVideos {
-			output.WriteString(fmt.Sprintf("- %s - %s\n", v.Title, v.ChannelTitle))
+			fmt.Fprintf(&output, "- %s - %s\n", v.Title, v.ChannelTitle)
 		}
 		output.WriteString("\n")
 
@@ -43,9 +43,9 @@ func (s *Server) registerAnalyzeTools() {
 			return nil, nil, fmt.Errorf("failed to get subscriptions: %w", err)
 		}
 
-		output.WriteString(fmt.Sprintf("## Subscribed Channels (%d channels)\n\n", len(subscriptions)))
+		fmt.Fprintf(&output, "## Subscribed Channels (%d channels)\n\n", len(subscriptions))
 		for _, sub := range subscriptions {
-			output.WriteString(fmt.Sprintf("- %s\n", sub.Title))
+			fmt.Fprintf(&output, "- %s\n", sub.Title)
 		}
 		output.WriteString("\n")
 
@@ -55,9 +55,9 @@ func (s *Server) registerAnalyzeTools() {
 			return nil, nil, fmt.Errorf("failed to list playlists: %w", err)
 		}
 
-		output.WriteString(fmt.Sprintf("## Your Playlists (%d playlists)\n\n", len(playlists)))
+		fmt.Fprintf(&output, "## Your Playlists (%d playlists)\n\n", len(playlists))
 		for _, pl := range playlists {
-			output.WriteString(fmt.Sprintf("- %s (%d items)\n", pl.Title, pl.ItemCount))
+			fmt.Fprintf(&output, "- %s (%d items)\n", pl.Title, pl.ItemCount)
 		}
 		output.WriteString("\n")
 
@@ -78,9 +78,9 @@ func (s *Server) registerAnalyzeTools() {
 					}
 
 					if len(items) > 0 {
-						output.WriteString(fmt.Sprintf("\nFrom playlist '%s':\n", pl.Title))
+						fmt.Fprintf(&output, "\nFrom playlist '%s':\n", pl.Title)
 						for _, item := range items {
-							output.WriteString(fmt.Sprintf("- %s - %s\n", item.Title, item.ChannelTitle))
+							fmt.Fprintf(&output, "- %s - %s\n", item.Title, item.ChannelTitle)
 							recommendedSongs++
 						}
 					}
