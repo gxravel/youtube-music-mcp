@@ -30,9 +30,8 @@ func NewServer(logger *slog.Logger, ytClient *youtube.Client) *Server {
 	}
 
 	// Register MCP tools
-	s.registerPlaylistTools()
-	s.registerSubscriptionTools()
-	s.registerSearchTools()
+	s.registerAnalyzeTools()
+	s.registerRecommendTools()
 
 	return s
 }
