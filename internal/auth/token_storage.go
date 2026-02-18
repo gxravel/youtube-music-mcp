@@ -172,7 +172,47 @@ func (p *PersistingTokenSource) Token() (*oauth2.Token, error) {
 	return token, nil
 }
 
+// MemoryTokenStorage implements TokenStorage using an in-memory token.
+// It is safe for concurrent use. Useful for server-side OAuth flows where
+// the token is obtained via the /callback endpoint and stored in memory.
+// Note: Token is lost on process restart — use as a short-lived holder.
+type MemoryTokenStorage struct {
+	mu    sync.RWMutex
+	token *oauth2.Token
+}
+
+// NewMemoryTokenStorage creates a new empty MemoryTokenStorage.
+func NewMemoryTokenStorage() *MemoryTokenStorage {
+	return &MemoryTokenStorage{}
+}
+
+// Load returns the stored token, or an error if no token has been saved yet.
+func (m *MemoryTokenStorage) Load() (*oauth2.Token, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	if m.token == nil {
+		return nil, fmt.Errorf("no token stored in memory")
+	}
+	return m.token, nil
+}
+
+// Save stores the token in memory.
+func (m *MemoryTokenStorage) Save(token *oauth2.Token) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.token = token
+	return nil
+}
+
+// HasToken reports whether a token has been stored.
+func (m *MemoryTokenStorage) HasToken() bool {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.token != nil
+}
+
 // Verify interfaces are implemented at compile time
 var _ TokenStorage = (*FileTokenStorage)(nil)
 var _ TokenStorage = (*EnvTokenStorage)(nil)
+var _ TokenStorage = (*MemoryTokenStorage)(nil)
 var _ oauth2.TokenSource = (*PersistingTokenSource)(nil)

@@ -96,8 +96,15 @@ func Authenticate(ctx context.Context, cfg *oauth2.Config, storage TokenStorage,
 		logger.Error("Failed to shut down callback server", "error", err)
 	}
 
-	// Exchange authorization code for token
-	token, err = cfg.Exchange(ctx, code)
+	// Exchange authorization code for token and save
+	return ExchangeAndSave(ctx, cfg, code, storage, logger)
+}
+
+// ExchangeAndSave exchanges an authorization code for a token, saves it to storage,
+// and returns an authenticated HTTP client. It is used both by the local OAuth callback
+// server (in Authenticate) and by the server-side /callback HTTP handler.
+func ExchangeAndSave(ctx context.Context, cfg *oauth2.Config, code string, storage TokenStorage, logger *slog.Logger) (*http.Client, error) {
+	token, err := cfg.Exchange(ctx, code)
 	if err != nil {
 		return nil, fmt.Errorf("failed to exchange code for token: %w", err)
 	}
