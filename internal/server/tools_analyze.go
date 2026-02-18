@@ -11,7 +11,7 @@ import (
 // Input type for analyze tool
 
 type analyzeTastesInput struct {
-	IncludePreviousRecommendations bool `json:"includePreviousRecommendations" jsonschema:"If true then also fetch songs from playlists previously created by this tool to adjust analysis"`
+	IncludePreviousRecommendations bool `json:"includePreviousRecommendations" jsonschema:"If true also fetch songs from playlists previously created by this tool to adjust analysis"`
 }
 
 // registerAnalyzeTools registers the analyze-my-tastes MCP tool
@@ -19,26 +19,32 @@ func (s *Server) registerAnalyzeTools() {
 	// Tool: ym:analyze-my-tastes
 	mcp.AddTool(s.mcpServer, &mcp.Tool{
 		Name:        "ym:analyze-my-tastes",
-		Description: "Analyzes the user's YouTube Music taste by gathering liked videos, subscriptions, playlists, and optionally previously recommended songs. Returns structured text analysis for the LLM to interpret. Quota cost: ~5-10 units (depending on whether previous recommendations are included).",
+		Description: "Analyzes the user's YouTube Music taste by gathering liked videos (music only), subscriptions, playlists, and optionally previously recommended songs. Returns structured text analysis for the LLM to interpret. Quota cost: ~5-10 units plus ~1 unit per 50 liked videos for music filtering.",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input analyzeTastesInput) (*mcp.CallToolResult, any, error) {
 		var output strings.Builder
 
 		output.WriteString("# YouTube Music Taste Analysis\n\n")
 
-		// 1. Fetch liked videos
-		likedVideos, err := s.ytClient.GetLikedVideos(ctx, 200)
+		// 1. Fetch ALL liked videos (no cap)
+		likedVideos, err := s.ytClient.GetLikedVideos(ctx)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to get liked videos: %w", err)
 		}
 
-		fmt.Fprintf(&output, "## Liked Songs (%d songs)\n\n", len(likedVideos))
+		// Filter to music-only (categoryId=10)
+		likedVideos, err = s.ytClient.FilterMusicVideos(ctx, likedVideos)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to filter music videos: %w", err)
+		}
+
+		fmt.Fprintf(&output, "## Liked Songs - music only (%d songs)\n\n", len(likedVideos))
 		for _, v := range likedVideos {
 			fmt.Fprintf(&output, "- %s - %s\n", v.Title, v.ChannelTitle)
 		}
 		output.WriteString("\n")
 
-		// 2. Fetch subscriptions
-		subscriptions, err := s.ytClient.GetSubscriptions(ctx, 100)
+		// 2. Fetch ALL subscriptions (no cap)
+		subscriptions, err := s.ytClient.GetSubscriptions(ctx)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to get subscriptions: %w", err)
 		}
@@ -49,8 +55,8 @@ func (s *Server) registerAnalyzeTools() {
 		}
 		output.WriteString("\n")
 
-		// 3. Fetch user's playlists
-		playlists, err := s.ytClient.ListPlaylists(ctx, 50)
+		// 3. Fetch ALL user's playlists (no cap)
+		playlists, err := s.ytClient.ListPlaylists(ctx)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to list playlists: %w", err)
 		}
@@ -69,8 +75,8 @@ func (s *Server) registerAnalyzeTools() {
 			for _, pl := range playlists {
 				// Check if playlist was created by this tool
 				if strings.HasPrefix(pl.Title, "[YM-MCP]") {
-					// Fetch playlist items
-					items, err := s.ytClient.GetPlaylistItems(ctx, pl.ID, 100)
+					// Fetch all playlist items (no cap)
+					items, err := s.ytClient.GetPlaylistItems(ctx, pl.ID)
 					if err != nil {
 						// Log error but continue
 						s.logger.Warn("failed to fetch items for playlist", "playlist", pl.Title, "error", err)

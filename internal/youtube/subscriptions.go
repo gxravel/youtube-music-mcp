@@ -2,7 +2,6 @@ package youtube
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	youtube_v3 "google.golang.org/api/youtube/v3"
@@ -15,13 +14,8 @@ type Subscription struct {
 	Description string
 }
 
-// GetSubscriptions retrieves the user's channel subscriptions
-func (c *Client) GetSubscriptions(ctx context.Context, maxResults int64) ([]Subscription, error) {
-	// Default to 25 if not specified
-	if maxResults <= 0 {
-		maxResults = 25
-	}
-
+// GetSubscriptions retrieves ALL of the user's channel subscriptions with no pagination cap.
+func (c *Client) GetSubscriptions(ctx context.Context) ([]Subscription, error) {
 	var subscriptions []Subscription
 	subscriptionsCall := c.service.Subscriptions.
 		List([]string{"snippet"}).
@@ -41,24 +35,13 @@ func (c *Client) GetSubscriptions(ctx context.Context, maxResults int64) ([]Subs
 				Title:       item.Snippet.Title,
 				Description: item.Snippet.Description,
 			})
-
-			// Stop if we've reached the requested count
-			if int64(len(subscriptions)) >= maxResults {
-				return errStopPagination
-			}
 		}
 
 		return nil
 	})
 
-	// Handle pagination stop
-	if err != nil && !errors.Is(err, errStopPagination) {
+	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve subscriptions: %w", err)
-	}
-
-	// Truncate to maxResults
-	if int64(len(subscriptions)) > maxResults {
-		subscriptions = subscriptions[:maxResults]
 	}
 
 	return subscriptions, nil

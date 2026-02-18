@@ -24,16 +24,8 @@ type Playlist struct {
 	ItemCount   int64
 }
 
-// Sentinel error for stopping pagination early
-var errStopPagination = fmt.Errorf("stop pagination")
-
-// GetLikedVideos retrieves the user's liked videos/songs
-func (c *Client) GetLikedVideos(ctx context.Context, maxResults int64) ([]Video, error) {
-	// Default to 50 if not specified
-	if maxResults <= 0 {
-		maxResults = 50
-	}
-
+// GetLikedVideos retrieves ALL of the user's liked videos with no pagination cap.
+func (c *Client) GetLikedVideos(ctx context.Context) ([]Video, error) {
 	// First, get the likes playlist ID
 	channelsCall := c.service.Channels.List([]string{"contentDetails"}).Mine(true)
 	channelsResp, err := channelsCall.Do()
@@ -50,7 +42,7 @@ func (c *Client) GetLikedVideos(ctx context.Context, maxResults int64) ([]Video,
 		return nil, fmt.Errorf("no likes playlist found")
 	}
 
-	// Now retrieve liked videos using pagination
+	// Retrieve all liked videos using pagination (no cap)
 	var videos []Video
 	playlistItemsCall := c.service.PlaylistItems.
 		List([]string{"snippet"}).
@@ -70,36 +62,20 @@ func (c *Client) GetLikedVideos(ctx context.Context, maxResults int64) ([]Video,
 				Title:        item.Snippet.Title,
 				ChannelTitle: item.Snippet.VideoOwnerChannelTitle,
 			})
-
-			// Stop if we've reached the requested count
-			if int64(len(videos)) >= maxResults {
-				return errStopPagination
-			}
 		}
 
 		return nil
 	})
 
-	// Handle pagination stop
-	if err != nil && !errors.Is(err, errStopPagination) {
+	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve liked videos: %w", err)
-	}
-
-	// Truncate to maxResults
-	if int64(len(videos)) > maxResults {
-		videos = videos[:maxResults]
 	}
 
 	return videos, nil
 }
 
-// ListPlaylists retrieves the user's playlists
-func (c *Client) ListPlaylists(ctx context.Context, maxResults int64) ([]Playlist, error) {
-	// Default to 25 if not specified
-	if maxResults <= 0 {
-		maxResults = 25
-	}
-
+// ListPlaylists retrieves ALL of the user's playlists with no pagination cap.
+func (c *Client) ListPlaylists(ctx context.Context) ([]Playlist, error) {
 	var playlists []Playlist
 	playlistsCall := c.service.Playlists.
 		List([]string{"snippet", "contentDetails"}).
@@ -120,39 +96,23 @@ func (c *Client) ListPlaylists(ctx context.Context, maxResults int64) ([]Playlis
 				Description: item.Snippet.Description,
 				ItemCount:   item.ContentDetails.ItemCount,
 			})
-
-			// Stop if we've reached the requested count
-			if int64(len(playlists)) >= maxResults {
-				return errStopPagination
-			}
 		}
 
 		return nil
 	})
 
-	// Handle pagination stop
-	if err != nil && !errors.Is(err, errStopPagination) {
+	if err != nil {
 		return nil, fmt.Errorf("failed to list playlists: %w", err)
-	}
-
-	// Truncate to maxResults
-	if int64(len(playlists)) > maxResults {
-		playlists = playlists[:maxResults]
 	}
 
 	return playlists, nil
 }
 
-// GetPlaylistItems retrieves videos from a specific playlist
-func (c *Client) GetPlaylistItems(ctx context.Context, playlistID string, maxResults int64) ([]Video, error) {
+// GetPlaylistItems retrieves ALL videos from a specific playlist with no pagination cap.
+func (c *Client) GetPlaylistItems(ctx context.Context, playlistID string) ([]Video, error) {
 	// Validate input
 	if playlistID == "" {
 		return nil, fmt.Errorf("playlistID cannot be empty")
-	}
-
-	// Default to 50 if not specified
-	if maxResults <= 0 {
-		maxResults = 50
 	}
 
 	var videos []Video
@@ -174,24 +134,13 @@ func (c *Client) GetPlaylistItems(ctx context.Context, playlistID string, maxRes
 				Title:        item.Snippet.Title,
 				ChannelTitle: item.Snippet.VideoOwnerChannelTitle,
 			})
-
-			// Stop if we've reached the requested count
-			if int64(len(videos)) >= maxResults {
-				return errStopPagination
-			}
 		}
 
 		return nil
 	})
 
-	// Handle pagination stop
-	if err != nil && !errors.Is(err, errStopPagination) {
+	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve playlist items: %w", err)
-	}
-
-	// Truncate to maxResults
-	if int64(len(videos)) > maxResults {
-		videos = videos[:maxResults]
 	}
 
 	return videos, nil

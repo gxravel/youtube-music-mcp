@@ -31,18 +31,18 @@ func (s *Server) registerRecommendTools() {
 		Name:        "ym:recommend-playlist",
 		Description: "Creates a playlist with recommended music based on the user's taste and an optional description. Gathers taste data, searches for songs, creates a playlist, and adds songs in one call. WARNING: Each search costs 100 quota units. This tool will use multiple searches to find diverse songs. Quota cost: ~200-500 units depending on number of songs.",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input recommendPlaylistInput) (*mcp.CallToolResult, any, error) {
-		// Gather taste context (lighter than full analysis)
-		likedVideos, err := s.ytClient.GetLikedVideos(ctx, 50)
+		// Gather taste context (uses full library - no caps)
+		likedVideos, err := s.ytClient.GetLikedVideos(ctx)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to get liked videos: %w", err)
 		}
 
-		subscriptions, err := s.ytClient.GetSubscriptions(ctx, 50)
+		subscriptions, err := s.ytClient.GetSubscriptions(ctx)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to get subscriptions: %w", err)
 		}
 
-		playlists, err := s.ytClient.ListPlaylists(ctx, 25)
+		playlists, err := s.ytClient.ListPlaylists(ctx)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to list playlists: %w", err)
 		}
@@ -184,7 +184,7 @@ func (s *Server) registerRecommendTools() {
 		fmt.Fprintf(&output, "**Taste context:** %d liked songs, %d subscriptions, %d playlists analyzed\n\n", len(likedVideos), len(subscriptions), len(playlists))
 		fmt.Fprintf(&output, "**Top artists in your taste:** %s\n\n", strings.Join(topArtists[:min(5, len(topArtists))], ", "))
 		output.WriteString(searchSummary.String())
-		fmt.Fprintf(&output, "\n**Estimated quota usage:** ~%d units (%d searches × 100 + 50 playlist creation + %d × 50 adds)\n", len(searchQueries)*100+50+added*50, len(searchQueries), added)
+		fmt.Fprintf(&output, "\n**Estimated quota usage:** ~%d units (%d searches x 100 + 50 playlist creation + %d x 50 adds)\n", len(searchQueries)*100+50+added*50, len(searchQueries), added)
 
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
@@ -198,13 +198,13 @@ func (s *Server) registerRecommendTools() {
 		Name:        "ym:recommend-artists",
 		Description: "Recommends artists the user would like based on their YouTube Music taste. Returns structured taste data for the LLM to use its own knowledge to generate recommendations. Does not search YouTube. Quota cost: ~5 units.",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input recommendArtistsInput) (*mcp.CallToolResult, any, error) {
-		// Gather taste data
-		likedVideos, err := s.ytClient.GetLikedVideos(ctx, 100)
+		// Gather full taste data (no caps)
+		likedVideos, err := s.ytClient.GetLikedVideos(ctx)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to get liked videos: %w", err)
 		}
 
-		subscriptions, err := s.ytClient.GetSubscriptions(ctx, 100)
+		subscriptions, err := s.ytClient.GetSubscriptions(ctx)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to get subscriptions: %w", err)
 		}
@@ -260,13 +260,13 @@ func (s *Server) registerRecommendTools() {
 		Name:        "ym:recommend-albums",
 		Description: "Recommends albums the user would like based on their YouTube Music taste. Returns structured taste data for the LLM to use its own knowledge to generate recommendations. Does not search YouTube. Quota cost: ~5 units.",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input recommendAlbumsInput) (*mcp.CallToolResult, any, error) {
-		// Gather taste data (same as recommend-artists)
-		likedVideos, err := s.ytClient.GetLikedVideos(ctx, 100)
+		// Gather full taste data (no caps)
+		likedVideos, err := s.ytClient.GetLikedVideos(ctx)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to get liked videos: %w", err)
 		}
 
-		subscriptions, err := s.ytClient.GetSubscriptions(ctx, 100)
+		subscriptions, err := s.ytClient.GetSubscriptions(ctx)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to get subscriptions: %w", err)
 		}

@@ -41,3 +41,63 @@ func (c *Client) ValidateAuth(ctx context.Context) (string, error) {
 
 	return resp.Items[0].Snippet.Title, nil
 }
+
+// FilterMusicVideos filters a slice of videos to only those in the Music category
+// (categoryId == "10"). Processes in batches of 50 to stay within API limits.
+// Quota cost: 1 unit per 50 videos.
+func (c *Client) FilterMusicVideos(ctx context.Context, videos []Video) ([]Video, error) {
+	if len(videos) == 0 {
+		return videos, nil
+	}
+
+	// Build a map of videoID -> Video for quick lookup
+	videoMap := make(map[string]Video, len(videos))
+	ids := make([]string, 0, len(videos))
+	for _, v := range videos {
+		if v.ID != "" {
+			videoMap[v.ID] = v
+			ids = append(ids, v.ID)
+		}
+	}
+
+	const batchSize = 50
+	musicIDs := make(map[string]struct{})
+
+	for i := 0; i < len(ids); i += batchSize {
+		// Check context cancellation
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+
+		end := i + batchSize
+		if end > len(ids) {
+			end = len(ids)
+		}
+		batch := ids[i:end]
+
+		resp, err := c.service.Videos.
+			List([]string{"snippet"}).
+			Id(batch...).
+			Fields("items(id,snippet/categoryId)").
+			Do()
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch video categories: %w", err)
+		}
+
+		for _, item := range resp.Items {
+			if item.Snippet != nil && item.Snippet.CategoryId == "10" {
+				musicIDs[item.Id] = struct{}{}
+			}
+		}
+	}
+
+	// Return only music videos in original order
+	filtered := make([]Video, 0, len(musicIDs))
+	for _, v := range videos {
+		if _, ok := musicIDs[v.ID]; ok {
+			filtered = append(filtered, v)
+		}
+	}
+
+	return filtered, nil
+}
