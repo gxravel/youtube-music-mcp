@@ -69,10 +69,7 @@ func (c *Client) FilterMusicVideos(ctx context.Context, videos []Video) ([]Video
 			return nil, err
 		}
 
-		end := i + batchSize
-		if end > len(ids) {
-			end = len(ids)
-		}
+		end := min(i+batchSize, len(ids))
 		batch := ids[i:end]
 
 		resp, err := c.service.Videos.
