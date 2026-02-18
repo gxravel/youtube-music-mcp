@@ -90,6 +90,43 @@ func (f *FileTokenStorage) Save(token *oauth2.Token) error {
 	return nil
 }
 
+// EnvTokenStorage implements TokenStorage using a token provided as a JSON string
+// in an environment variable. Useful for Railway/serverless deployments where
+// filesystem persistence is not available.
+// Note: Save is a no-op — token refreshes will not be persisted between restarts.
+type EnvTokenStorage struct {
+	tokenJSON string
+	logger    *slog.Logger
+}
+
+// NewEnvTokenStorage creates a new EnvTokenStorage from a raw JSON token string.
+func NewEnvTokenStorage(tokenJSON string, logger *slog.Logger) *EnvTokenStorage {
+	return &EnvTokenStorage{tokenJSON: tokenJSON, logger: logger}
+}
+
+// Load parses the JSON token string and returns the OAuth2 token.
+func (e *EnvTokenStorage) Load() (*oauth2.Token, error) {
+	if e.tokenJSON == "" {
+		return nil, fmt.Errorf("OAUTH_TOKEN_JSON is empty")
+	}
+
+	var token oauth2.Token
+	if err := json.Unmarshal([]byte(e.tokenJSON), &token); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal OAUTH_TOKEN_JSON: %w", err)
+	}
+
+	return &token, nil
+}
+
+// Save is a no-op for EnvTokenStorage. Token refreshes are not persisted.
+// A warning is logged to alert operators that refresh tokens may expire.
+func (e *EnvTokenStorage) Save(_ *oauth2.Token) error {
+	if e.logger != nil {
+		e.logger.Warn("EnvTokenStorage: token refresh cannot be persisted; update OAUTH_TOKEN_JSON when token expires")
+	}
+	return nil
+}
+
 // PersistingTokenSource wraps an oauth2.TokenSource to automatically persist
 // refreshed tokens to storage.
 type PersistingTokenSource struct {
@@ -137,4 +174,5 @@ func (p *PersistingTokenSource) Token() (*oauth2.Token, error) {
 
 // Verify interfaces are implemented at compile time
 var _ TokenStorage = (*FileTokenStorage)(nil)
+var _ TokenStorage = (*EnvTokenStorage)(nil)
 var _ oauth2.TokenSource = (*PersistingTokenSource)(nil)

@@ -20,7 +20,7 @@ func NewOAuth2Config(clientID, clientSecret, redirectURL string) *oauth2.Config 
 		ClientSecret: clientSecret,
 		RedirectURL:  redirectURL,
 		Endpoint:     google.Endpoint,
-		Scopes:       []string{youtube.YoutubeReadonlyScope},
+		Scopes:       []string{youtube.YoutubeScope},
 	}
 }
 

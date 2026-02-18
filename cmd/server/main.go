@@ -38,8 +38,15 @@ func main() {
 	// Create OAuth2 config
 	oauthCfg := auth.NewOAuth2Config(cfg.GoogleClientID, cfg.GoogleClientSecret, cfg.OAuthRedirectURL)
 
-	// Create token storage
-	storage := auth.NewFileTokenStorage(auth.DefaultTokenPath())
+	// Select token storage: env-based (Railway) or file-based (local)
+	var storage auth.TokenStorage
+	if cfg.TokenJSON != "" {
+		logger.Info("using environment-based token storage (OAUTH_TOKEN_JSON)")
+		storage = auth.NewEnvTokenStorage(cfg.TokenJSON, logger)
+	} else {
+		logger.Info("using file-based token storage", "path", auth.DefaultTokenPath())
+		storage = auth.NewFileTokenStorage(auth.DefaultTokenPath())
+	}
 
 	// Authenticate (either load existing token or run OAuth flow)
 	httpClient, err := auth.Authenticate(ctx, oauthCfg, storage, cfg.OAuthPort, logger)
@@ -63,8 +70,8 @@ func main() {
 	}
 	logger.Info("authenticated with youtube", "channel", channelName)
 
-	// Create and run MCP server
-	srv := server.NewServer(logger, ytClient)
+	// Create and run MCP server with configured transport
+	srv := server.NewServer(logger, ytClient, cfg.Transport, cfg.Port)
 	if err := srv.Run(ctx); err != nil {
 		logger.Error("server failed", "error", err)
 		os.Exit(1)

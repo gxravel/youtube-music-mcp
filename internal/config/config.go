@@ -18,6 +18,18 @@ type Config struct {
 
 	// OAuthPort is the port for the local OAuth callback server (default: 8080).
 	OAuthPort int `env:"OAUTH_PORT" envDefault:"8080"`
+
+	// Transport selects the MCP transport: "stdio" (default) or "sse".
+	// Use "sse" for Railway/hosted deployments.
+	Transport string `env:"TRANSPORT" envDefault:"stdio"`
+
+	// Port is the HTTP port for SSE transport (Railway sets this automatically).
+	Port int `env:"PORT" envDefault:"8080"`
+
+	// TokenJSON is the raw JSON of an OAuth token for environments without
+	// filesystem token storage (e.g., Railway). When set, FileTokenStorage
+	// is not used.
+	TokenJSON string `env:"OAUTH_TOKEN_JSON"`
 }
 
 // Load loads the configuration from environment variables.
