@@ -157,7 +157,7 @@ func (s *Server) runSSE(ctx context.Context) error {
 	// MCP OAuth flow endpoints
 	mux.HandleFunc("POST /register", s.mcpOAuth.RegisterHandler())
 	mux.HandleFunc("GET /authorize", s.mcpOAuth.AuthorizeHandler())
-	mux.HandleFunc("GET /google-callback", s.mcpOAuth.GoogleCallbackHandler())
+	mux.HandleFunc("GET /callback", s.mcpOAuth.GoogleCallbackHandler())
 	mux.HandleFunc("POST /token", s.mcpOAuth.TokenHandler())
 
 	// SSE catch-all — gated behind bearer token auth

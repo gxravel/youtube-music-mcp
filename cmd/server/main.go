@@ -101,7 +101,7 @@ func runSSEMode(ctx context.Context, cfg *config.Config, logger *slog.Logger) {
 	googleCfg := auth.NewOAuth2Config(
 		cfg.GoogleClientID,
 		cfg.GoogleClientSecret,
-		cfg.BaseURL+"/google-callback",
+		cfg.BaseURL+"/callback",
 	)
 
 	// Create MCP OAuth Authorization Server
