@@ -19,6 +19,10 @@ type Config struct {
 	// OAuthPort is the port for the local OAuth callback server (default: 8080).
 	OAuthPort int `env:"OAUTH_PORT" envDefault:"8080"`
 
+	// BaseURL is the public base URL of the server (required for SSE mode).
+	// Example: https://youtube-music-mcp-production.up.railway.app
+	BaseURL string `env:"BASE_URL"`
+
 	// Transport selects the MCP transport: "stdio" (default) or "sse".
 	// Use "sse" for Railway/hosted deployments.
 	Transport string `env:"TRANSPORT" envDefault:"stdio"`
