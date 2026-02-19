@@ -4,10 +4,55 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"regexp"
 	"strings"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
+
+// instructionalWords are words that indicate a phrase is an LLM instruction, not a search term.
+var instructionalWords = []string{
+	"focus", "include", "avoid", "exclude", "not ", "these are",
+	"based on", "should", "must", "make sure", "prefer", "prioritize",
+	"similar to what", "songs from", "mix of",
+}
+
+// splitDescriptionIntoTerms splits a description into individual search-friendly terms.
+func splitDescriptionIntoTerms(description string) []string {
+	// Split by commas, periods, semicolons, colons, and the word "and"
+	re := regexp.MustCompile(`[,;.:\n]+|\band\b`)
+	parts := re.Split(description, -1)
+
+	var terms []string
+	for _, part := range parts {
+		term := strings.TrimSpace(part)
+		if term == "" {
+			continue
+		}
+
+		// Skip instructional/meta phrases
+		lower := strings.ToLower(term)
+		isInstructional := false
+		for _, word := range instructionalWords {
+			if strings.Contains(lower, word) {
+				isInstructional = true
+				break
+			}
+		}
+		if isInstructional {
+			continue
+		}
+
+		// Cap at 80 characters
+		if len(term) > 80 {
+			term = term[:80]
+		}
+
+		terms = append(terms, term)
+	}
+
+	return terms
+}
 
 // Input types for recommendation tools
 
@@ -86,24 +131,24 @@ func (s *Server) registerRecommendTools() {
 		}
 
 		// Construct search queries
-		numQueries := min(int(math.Ceil(float64(input.NumberOfSongs)/5.0)), 5)
+		maxQueries := min(int(math.Ceil(float64(input.NumberOfSongs)/3.0)), 10)
 
 		var searchQueries []string
 		if input.Description != "" {
-			// Use description + top artists for variety
-			for i := 0; i < numQueries && i < len(topArtists); i++ {
-				query := fmt.Sprintf("%s %s", input.Description, topArtists[i])
-				searchQueries = append(searchQueries, query)
+			// Extract individual search terms from description
+			terms := splitDescriptionIntoTerms(input.Description)
+			for _, term := range terms {
+				if len(searchQueries) >= maxQueries {
+					break
+				}
+				searchQueries = append(searchQueries, term)
 			}
-			// If we need more queries, add plain description
-			if len(searchQueries) < numQueries {
-				searchQueries = append(searchQueries, input.Description)
-			}
-		} else {
-			// No description - search by top artists
-			for i := 0; i < numQueries && i < len(topArtists); i++ {
-				query := fmt.Sprintf("music similar to %s", topArtists[i])
-				searchQueries = append(searchQueries, query)
+		}
+
+		// Fall back to top artists if description yielded insufficient queries
+		if len(searchQueries) < maxQueries {
+			for i := 0; i < len(topArtists) && len(searchQueries) < maxQueries; i++ {
+				searchQueries = append(searchQueries, topArtists[i])
 			}
 		}
 
@@ -114,7 +159,7 @@ func (s *Server) registerRecommendTools() {
 
 		searchSummary.WriteString("Search queries executed:\n")
 		for _, query := range searchQueries {
-			results, err := s.ytClient.SearchVideos(ctx, query, 10)
+			results, err := s.ytClient.SearchVideos(ctx, query, 5)
 			if err != nil {
 				// Log error but continue with other searches
 				s.logger.Warn("search failed", "query", query, "error", err)
