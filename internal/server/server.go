@@ -105,41 +105,29 @@ func (s *Server) runStdio(ctx context.Context) error {
 	return s.mcpServer.Run(ctx, &mcp.StdioTransport{})
 }
 
-// runSSE runs the MCP server as an HTTP server using SSE transport (for Railway/hosted deployments).
+// runSSE runs the MCP server as an HTTP server using Streamable HTTP transport
+// (for Railway/hosted deployments).
 // Implements MCP OAuth specification (RFC 9728 + RFC 8414 + DCR).
-//
-// Routes:
-//
-//	GET  /health                              — Railway health check (always 200)
-//	GET  /.well-known/oauth-protected-resource — RFC 9728 resource metadata
-//	GET  /.well-known/oauth-authorization-server — RFC 8414 auth server metadata
-//	GET  /jwks                                — Empty JWK set (opaque tokens)
-//	POST /register                            — Dynamic Client Registration
-//	GET  /authorize                           — Start OAuth flow (redirects to Google)
-//	GET  /google-callback                     — Google redirects here
-//	POST /token                               — Token exchange
-//	/    (catch-all)                           — SSE handler (Bearer token required)
 func (s *Server) runSSE(ctx context.Context) error {
 	addr := fmt.Sprintf(":%d", s.port)
-	s.logger.Info("starting MCP server", "transport", "sse", "addr", addr)
+	s.logger.Info("starting MCP server", "transport", "streamable-http", "addr", addr)
 
-	sseHandler := mcp.NewSSEHandler(func(req *http.Request) *mcp.Server {
+	streamHandler := mcp.NewStreamableHTTPHandler(func(req *http.Request) *mcp.Server {
+		if err := s.ensureYTClient(req.Context()); err != nil {
+			s.logger.Error("failed to initialize YouTube client", "error", err)
+			return nil
+		}
 		return s.mcpServer
-	}, nil)
+	}, &mcp.StreamableHTTPOptions{
+		Logger: s.logger,
+	})
 
-	// Wrap SSE handler with bearer token middleware + lazy YouTube client init.
+	// Wrap streamable handler with bearer token middleware.
 	resourceMetadataURL := s.mcpOAuth.BaseURL() + "/.well-known/oauth-protected-resource"
 	bearerMiddleware := mcpauth.RequireBearerToken(s.mcpOAuth.TokenVerifier(), &mcpauth.RequireBearerTokenOptions{
 		ResourceMetadataURL: resourceMetadataURL,
 	})
-	protectedSSE := bearerMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if err := s.ensureYTClient(r.Context()); err != nil {
-			s.logger.Error("failed to initialize YouTube client", "error", err)
-			http.Error(w, "YouTube client initialization failed", http.StatusInternalServerError)
-			return
-		}
-		sseHandler.ServeHTTP(w, r)
-	}))
+	protectedMCP := bearerMiddleware(streamHandler)
 
 	mux := http.NewServeMux()
 
@@ -160,8 +148,8 @@ func (s *Server) runSSE(ctx context.Context) error {
 	mux.HandleFunc("GET /callback", s.mcpOAuth.GoogleCallbackHandler())
 	mux.HandleFunc("POST /token", s.mcpOAuth.TokenHandler())
 
-	// SSE catch-all — gated behind bearer token auth
-	mux.Handle("/", protectedSSE)
+	// Streamable HTTP MCP endpoint — gated behind bearer token auth
+	mux.Handle("/mcp", protectedMCP)
 
 	httpServer := &http.Server{
 		Addr:    addr,
